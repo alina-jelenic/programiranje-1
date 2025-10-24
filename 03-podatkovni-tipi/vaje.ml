@@ -19,13 +19,13 @@
  Namig: Občudujte informativnost tipov funkcij.
 [*----------------------------------------------------------------------------*)
 
-type euro 
+type euro = Euro of float
 
-type dollar 
+type dollar = Dollar of float
 
-let dollar_to_euro _ = ()
+let dollar_to_euro (Dollar x) = Euro (x *. 1.03) 
 
-let euro_to_dollar _ = ()
+let euro_to_dollar (Euro x) = Dollar (x *. 0.97)
 
 (* let primer_valute_1 = dollar_to_euro (Dollar 0.5) *)
 (* val primer_valute_1 : euro = Euro 0.4305 *)
@@ -39,9 +39,18 @@ let euro_to_dollar _ = ()
  Ocaml sam opozori, da je potrebno popraviti funkcijo `to_pound`.
 [*----------------------------------------------------------------------------*)
 
-type currency 
+type currency =
+  | Yen of float
+  | Pound of float
+  | Crown of float
+  | Frank of float
 
-let to_pound _ = ()
+let to_pound x = 
+  match x with
+  | Yen x ->  Pound (x *. 1.3)
+  | Pound x -> Pound (x)
+  | Crown x -> Pound (x *. 1.08)
+  | Frank x -> Pound (x *. 1.66)
 
 (* let primer_valute_2 = to_pound (Yen 100.) *)
 (* val primer_valute_2 : currency = Pound 0.700000000000000067 *)
@@ -69,9 +78,12 @@ let to_pound _ = ()
  Nato napišite testni primer, ki bi predstavljal `[5; true; false; 7]`.
 [*----------------------------------------------------------------------------*)
 
-type intbool_list 
+type intbool_list = 
+  | Nil
+  | Int of int * intbool_list
+  | Bool of bool * intbool_list
 
-let test = ()
+let test = Int (5, Bool (true, Bool (false, Int (7, Nil))))
 
 (*----------------------------------------------------------------------------*
  Funkcija `intbool_map f_int f_bool ib_list` preslika vrednosti `ib_list` v nov
@@ -79,14 +91,25 @@ let test = ()
  oz. `f_bool`.
 [*----------------------------------------------------------------------------*)
 
-let rec intbool_map _ _ _ = ()
+let rec intbool_map f_int f_bool = 
+  function
+  | Int (x, y) -> Int(f_int x, intbool_map f_int f_bool y)
+  | Bool (a, b) -> Bool ( f_bool a, intbool_map f_int f_bool b)
+  | Nil -> Nil
 
 (*----------------------------------------------------------------------------*
  Funkcija `intbool_reverse` obrne vrstni red elementov `intbool_list` seznama.
  Funkcija je repno rekurzivna.
 [*----------------------------------------------------------------------------*)
 
-let rec intbool_reverse _ = ()
+let rec intbool_reverse ib_list = 
+  let rec obrni acc =
+    function
+    | Nil -> acc
+    | Int (x, y) -> obrni (Int (x, acc)) y
+    | Bool (a, b) -> obrni (Bool (a, acc)) b
+  in
+  obrni Nil ib_list
 
 (*----------------------------------------------------------------------------*
  Funkcija `intbool_separate ib_list` loči vrednosti `ib_list` v par `list`
@@ -94,7 +117,17 @@ let rec intbool_reverse _ = ()
  vrednosti. Funkcija je repno rekurzivna in ohranja vrstni red elementov.
 [*----------------------------------------------------------------------------*)
 
-let rec intbool_separate _ = ()
+let rec intbool_separate ib_list = 
+  match ib_list with
+  | Nil -> ([], [])
+  | Int (x, y) -> (
+    let ints, bools = intbool_separate y in
+    (x :: ints, bools)
+  ) 
+  | Bool (a, b) -> (
+    let ints, bools = intbool_separate b in
+    (ints, a :: bools)
+  )
 
 (*----------------------------------------------------------------------------*
  ## Čarodeji
@@ -112,9 +145,15 @@ let rec intbool_separate _ = ()
  tip `specialisation`, ki loči med temi zaposlitvami.
 [*----------------------------------------------------------------------------*)
 
-type magic 
+type magic = 
+ | Fire
+ | Frost
+ | Arcane
 
-type specialisation 
+type specialisation =
+ | Historian
+ | Teacher
+ | Researcher
 
 (*----------------------------------------------------------------------------*
  Vsak od čarodejev začne kot začetnik, nato na neki točki postane študent, na
@@ -130,13 +169,19 @@ type specialisation
  `jaina`, ki je četrto leto študentka magije ledu.
 [*----------------------------------------------------------------------------*)
 
-type status 
+type status =
+ | Newbie
+ | Student of magic * int
+ | Employed of magic * specialisation
 
-type wizard 
+type wizard = {
+  ime : string;
+  status : status;
+}
 
-let professor  = ()
+let professor  = {ime = "Profesor"; status = Employed (Fire, Teacher)}
 
-let jaina  = ()
+let jaina  = {ime = "Jaina"; status = Student (Frost, 4)}
 
 (*----------------------------------------------------------------------------*
  Želimo prešteti koliko uporabnikov posamezne od vrst magije imamo na akademiji.
@@ -145,9 +190,18 @@ let jaina  = ()
  nov števec s posodobljenim poljem glede na vrednost `magic`.
 [*----------------------------------------------------------------------------*)
 
-type magic_counter 
+type magic_counter = {
+  fire : int;
+  frost : int;
+  arcane : int;
+}
 
-let update _ _ = ()
+let update state magic = 
+  match magic with
+  | Fire -> {state with fire = state.fire + 1} 
+  | Frost -> {state with frost = state.frost + 1}
+  | Arcane -> {state with arcane = state.arcane + 1}
+
 
 (* let primer_carovniki_1 = update {fire = 1; frost = 1; arcane = 1} Arcane *)
 (* val primer_carovniki_1 : magic_counter = {fire = 1; frost = 1; arcane = 2} *)
@@ -157,7 +211,15 @@ let update _ _ = ()
  različnih vrst magij.
 [*----------------------------------------------------------------------------*)
 
-let count_magic _ = ()
+let count_magic seznam = 
+  let rec aux state = 
+    function
+    | [] -> state
+    | {status = Employed (magija, _)}::xs -> aux (update state magija) xs
+    | {status = Student (magija, _)}::xs -> aux (update state magija) xs
+    | x:: xs -> aux state xs
+  in
+  aux {fire = 0; frost = 0; arcane = 0} seznam
 
 (* let primer_carovniki_2 = count_magic [professor; professor; professor] *)
 (* val primer_carovniki_2 : magic_counter = {fire = 3; frost = 0; arcane = 0} *)
@@ -172,8 +234,27 @@ let count_magic _ = ()
  `None`.
 [*----------------------------------------------------------------------------*)
 
-let find_candidate _ _ _ = ()
-
+let find_candidate magija spec seznam= 
+  let rec aux =
+    function
+    | [] -> None
+    | {ime; status = Student(mag, leta)} ::xs -> (
+      if mag = magija then 
+        if
+            leta
+            >=
+            match spec with
+            | Historian -> 3
+            | Teacher -> 5
+            | Researcher -> 4
+          then Some ime
+        else aux xs
+      else aux xs
+    )
+    | y :: ys -> aux ys
+  in
+  aux seznam
+ 
 (* let primer_carovniki_3 =
   find_candidate Frost Researcher [professor; jaina] *)
 (* val primer_carovniki_3 : string option = Some "Jaina" *)
