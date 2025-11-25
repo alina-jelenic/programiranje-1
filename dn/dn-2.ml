@@ -102,7 +102,9 @@ module DFA : DFA_SIG = struct
     zacetno_stanje = t.zacetno_stanje;
     prehodi = t.prehodi;
   }
-  let dodaj_prehod stanje1 a stanje2 t = {
+  let dodaj_prehod stanje1 a stanje2 t = 
+    if List.exists (fun (s, c, _)-> s = stanje1 && c = a) t.prehodi then t
+    else {
     stanja = t.stanja; 
     zacetno_stanje = t.zacetno_stanje;
     prehodi = List.append t.prehodi [(stanje1, a, stanje2)];
@@ -699,21 +701,25 @@ let primer_regex_6 = List.filter (nfa_sprejema (znak_nfa '0')) nizi
 let unija_nfa nfa1 nfa2 =
   let open NFA in
   let kopiraj_avtomat predpona avtomat zacetni_avtomat =
-    let z_dodanimi_stanji =
-      List.fold_left
-        (fun acc stanje ->
-           let je_sprejemno = je_sprejemno_stanje avtomat stanje in
-           dodaj_stanje (predpona ^ stanje) je_sprejemno acc)
-        zacetni_avtomat
-        (seznam_stanj avtomat)
+    let rec dod_stanja acc = function
+      | [] -> acc
+      | stanje :: stanja ->
+          let je_sprejemno = je_sprejemno_stanje avtomat stanje in
+          let new_acc = dodaj_stanje (predpona ^ stanje) je_sprejemno acc in
+          dod_stanja new_acc stanja
     in
-    List.fold_left
-      (fun acc (iz, znak, v) ->
-         match znak with
-         | None         -> dodaj_prazen_prehod (predpona ^ iz) (predpona ^ v) acc
-         | Some crka    -> dodaj_prehod (predpona ^ iz) crka (predpona ^ v) acc)
-      z_dodanimi_stanji
-      (seznam_prehodov avtomat)
+    let z_dodanimi_stanji = dod_stanja zacetni_avtomat (seznam_stanj avtomat) in
+    let rec dod_prehode acc = function
+      | [] -> acc
+      | (iz, znak, v) :: prehodi ->
+          let new_acc =
+            match znak with
+            | None -> dodaj_prazen_prehod (predpona ^ iz) (predpona ^ v) acc
+            | Some crka -> dodaj_prehod (predpona ^ iz) crka (predpona ^ v) acc
+          in
+          dod_prehode new_acc prehodi
+    in
+    dod_prehode z_dodanimi_stanji (seznam_prehodov avtomat)
   in
   ustvari "zacetek_unije" false
   |> kopiraj_avtomat "L_" nfa1          
@@ -723,7 +729,6 @@ let unija_nfa nfa1 nfa2 =
 
 let primer_regex_7 = List.filter (nfa_sprejema (unija_nfa epsilon_nfa (znak_nfa '0'))) nizi
 (* val primer_regex_7 : string list = [""; "0"] *)
-(* 1. Build the two small NFAs *)
 
 (*----------------------------------------------------------------------------*
  Definirajte funkcijo `stik_nfa: NFA.t -> NFA.t -> NFA.t`. Vrnjeni avtomat
@@ -734,21 +739,25 @@ let primer_regex_7 = List.filter (nfa_sprejema (unija_nfa epsilon_nfa (znak_nfa 
 let stik_nfa nfa1 nfa2 = 
   let open NFA in
   let kopiraj_avtomat predpona avtomat ohrani_sprejemna zacetni_avtomat =
-    let z_dodanimi_stanji =
-      List.fold_left
-        (fun acc stanje ->
-           let je_sprejemno = if ohrani_sprejemna then je_sprejemno_stanje avtomat stanje else false in
-           dodaj_stanje (predpona ^ stanje) je_sprejemno acc)
-        zacetni_avtomat
-        (seznam_stanj avtomat)
+    let rec dod_stanja acc = function
+      | [] -> acc
+      | stanje :: stanja ->
+          let je_sprejemno = if ohrani_sprejemna then je_sprejemno_stanje avtomat stanje else false in
+          let new_acc = dodaj_stanje (predpona ^ stanje) je_sprejemno acc in
+          dod_stanja new_acc stanja
     in
-    List.fold_left
-      (fun acc (iz, znak, v) ->
-         match znak with
-         | None         -> dodaj_prazen_prehod (predpona ^ iz) (predpona ^ v) acc
-         | Some crka    -> dodaj_prehod (predpona ^ iz) crka (predpona ^ v) acc)
-      z_dodanimi_stanji
-      (seznam_prehodov avtomat)
+    let z_dodanimi_stanji = dod_stanja zacetni_avtomat (seznam_stanj avtomat) in
+    let rec dod_prehode acc = function
+      | [] -> acc
+      | (iz, znak, v) :: prehodi ->
+          let new_acc =
+            match znak with
+            | None -> dodaj_prazen_prehod (predpona ^ iz) (predpona ^ v) acc
+            | Some crka -> dodaj_prehod (predpona ^ iz) crka (predpona ^ v) acc
+          in
+          dod_prehode new_acc prehodi
+    in
+    dod_prehode z_dodanimi_stanji (seznam_prehodov avtomat)
   in
   let koncna_stanja_nfa1 =
     List.filter (fun s -> je_sprejemno_stanje nfa1 s)
@@ -775,21 +784,25 @@ let primer_regex_8 = List.filter (nfa_sprejema (stik_nfa (znak_nfa '0') (znak_nf
 let kleenejevo_zaprtje_nfa nfa =
   let open NFA in
   let kopiraj_avtomat predpona avtomat zacetni_avtomat =
-    let z_dodanimi_stanji =
-      List.fold_left
-        (fun acc stanje ->
-           let je_sprejemno = je_sprejemno_stanje avtomat stanje in
-           dodaj_stanje (predpona ^ stanje) je_sprejemno acc)
-        zacetni_avtomat
-        (seznam_stanj avtomat)
+    let rec dod_stanja acc = function
+      | [] -> acc
+      | stanje :: stanja ->
+          let je_sprejemno = je_sprejemno_stanje avtomat stanje in
+          let new_acc = dodaj_stanje (predpona ^ stanje) je_sprejemno acc in
+          dod_stanja new_acc stanja
     in
-    List.fold_left
-      (fun acc (iz, znak, v) ->
-         match znak with
-         | None      -> dodaj_prazen_prehod (predpona ^ iz) (predpona ^ v) acc
-         | Some crka -> dodaj_prehod (predpona ^ iz) crka (predpona ^ v) acc)
-      z_dodanimi_stanji
-      (seznam_prehodov avtomat)
+    let z_dodanimi_stanji = dod_stanja zacetni_avtomat (seznam_stanj avtomat) in
+    let rec dod_prehode acc = function
+      | [] -> acc
+      | (iz, znak, v) :: prehodi ->
+          let new_acc =
+            match znak with
+            | None -> dodaj_prazen_prehod (predpona ^ iz) (predpona ^ v) acc
+            | Some crka -> dodaj_prehod (predpona ^ iz) crka (predpona ^ v) acc
+          in
+          dod_prehode new_acc prehodi
+    in
+    dod_prehode z_dodanimi_stanji (seznam_prehodov avtomat)
   in
   let koncna_stanja_original =
     List.filter (fun s -> je_sprejemno_stanje nfa s)
