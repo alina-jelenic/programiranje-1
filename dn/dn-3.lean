@@ -1,5 +1,7 @@
 set_option autoImplicit false
 open Classical
+
+
 /------------------------------------------------------------------------------
  ## Naravna števila
 
@@ -34,11 +36,19 @@ theorem vsota_lihih_kvadrat : (n : Nat) → vsota_lihih n = n * n :=
       _ = 0 := by simp [vsota_lihih]
       _ = 0 * 0 := by simp [Nat.mul_zero]
     | succ x ih =>
-      simp [Nat.add_mul]
-      simp [vsota_lihih]
-      simp [Nat.mul_add]
-      simp [ih]
-      omega
+      calc
+        vsota_lihih (x + 1)
+        _ = vsota_lihih x + (2 * (x + 1) -1) := by rw[vsota_lihih]
+        _ = x * x + (2 * (x + 1) -1) := by rw[ih]
+        _ = x * x + (2 * x + 2 - 1) := by rw[Nat.mul_add]
+        _ = x * x + 2 * x + 1 := by simp[Nat.add_assoc]
+        _ = x * x + (x + x) + 1 := by rw[Nat.two_mul]
+        _ = x * x + x + x + 1 := by simp[Nat.add_assoc]
+        _ = x * x + x * 1 + 1 * x + 1 * 1 := by simp[Nat.mul_one]
+        _ = x * x + x + (x + 1) := by simp [Nat.add_assoc]
+        _ = x*(x+1) + 1*(x+1) := by simp[Nat.mul_add]
+        _ = (x + 1) * x + (x + 1) * 1 := by simp[Nat.mul_comm]
+        _ = (x + 1) * (x + 1) := by simp[Nat.mul_add]
 
 -- Vsota prvih n produktov zaporednih naravnih števil
 def vsota_produktov : Nat → Nat :=
@@ -62,7 +72,7 @@ theorem prava_formula_produktov : (n : Nat) → vsota_produktov n = (n * (n + 1)
     intro n
     induction n with
     | zero => simp[vsota_produktov]
-    | succ k ih => 
+    | succ k ih =>
       simp[vsota_produktov, Nat.mul_add, ih]
       simp[Nat.add_mul, Nat.mul_assoc]
       omega
@@ -148,10 +158,15 @@ theorem preslikaj_identiteto : {A : Type} → {n : Nat} → (xs : Vektor A n) �
   by
     intro A n xs
     induction xs with
-    | prazen => simp[preslikaj]
+    | prazen =>
+      calc
+        preslikaj id .prazen
+        _ = .prazen := by simp [preslikaj]
     | sestavljen a v ih =>
-      simp[preslikaj]
-      exact ih
+      calc
+        preslikaj id (.sestavljen a v)
+        _ = .sestavljen (id a) (preslikaj id v) := by simp [preslikaj]
+        _ = .sestavljen a v := by simp [ih]
 
 theorem preslikaj_kompozitum :
   {A B C : Type} → {n : Nat} → (f : A → B) → (g : B → C) → (xs : Vektor A n) →
@@ -230,33 +245,64 @@ theorem kontrapozitivna_oblika {P Q : Prop} : (P → Q) ↔ (¬Q → ¬P) :=
     · intro pq neq p
       exact neq (pq p)
     · intro neqnep p
-      apply Classical.byContradiction 
-      intro nq 
+      apply Classical.byContradiction
+      intro nq
       have np := neqnep nq
       exact np p
 
 theorem pravilo_obstaja_disjunkcija : {A : Type} → {P Q : A → Prop} →
   (∃ x, P x ∨ Q x) ↔ (∃ x, P x) ∨ (∃ x, Q x) :=
   by
-    intro a p q 
+    intro a p q
     apply Iff.intro
     · intro prvi
       let ⟨x, h1⟩ := prvi
-      sorry
-
+      cases h1 with
+      | inl hp => exact Or.inl ⟨x, hp⟩
+      | inr hq => exact Or.inr ⟨x, hq⟩
+    · intro drugi
+      cases drugi with
+      | inl ep =>
+        let ⟨x, hp⟩ := ep
+        exact ⟨x, Or.inl hp⟩
+      | inr eq =>
+        let ⟨x, hq⟩ := eq
+        exact ⟨x, Or.inr hq⟩
 
 theorem obstaja_p_ali_za_vse_ne_p {A : Type} {P : A → Prop} :
   (∃ x, P x) ∨ (∀ x, ¬ P x) :=
   by
-    sorry
+    apply Classical.byCases
+    · intro h
+      exact Or.inl h
+    · intro h
+      apply Or.inr
+      intro x
+      apply Classical.byContradiction
+      intro px
+      apply h
+      have px_true : P x := Classical.not_not.mp px
+      exact ⟨x, px_true⟩
 
 theorem paradoks_pivca :
   {G : Type} → {P : G → Prop} →
   (g : G) →  -- (g : G) pove, da je v gostilni vsaj en gost
   ∃ (p : G), (P p → ∀ (x : G), P x) :=
   by
-    sorry
-
+    intro G P g
+    by_cases h : ∃ (x : G), ¬ P x
+    · obtain ⟨ p, np ⟩ := h
+      apply Exists.intro p
+      intro pp x
+      exfalso
+      exact np pp
+    · apply Exists.intro g
+      intro pg x
+      have hx : ¬¬ P x := by
+        intro npx
+        apply h
+        exact ⟨x, npx⟩
+      exact Classical.not_not.mp hx
 
 /------------------------------------------------------------------------------
  ## Dvojiška drevesa
@@ -329,6 +375,23 @@ def vsota' : Drevo Nat → Nat :=
     | .sestavljeno x l d => aux l (x + aux d acc)
   fun t => aux t 0
 
+theorem aux_deluje_pravilno : ∀ (t : Drevo Nat) (acc : Nat), vsota'.aux t acc = vsota t + acc :=
+  by
+    intro t acc
+    induction t generalizing acc with
+    | prazno =>
+      simp [vsota, vsota'.aux]
+    | sestavljeno x l d ihl ihd =>
+      simp [vsota, vsota'.aux]
+      rw [ihd]
+      rw [ihl]
+      simp [Nat.add_comm, Nat.add_left_comm]
+
 theorem vsota_eq_vsota' : ∀ {t : Drevo Nat}, vsota t = vsota' t :=
   by
-    sorry
+    intro t
+    calc
+      vsota t
+        = vsota t + 0 := by rw [Nat.add_zero]
+      _ = vsota'.aux t 0 := by rw [aux_deluje_pravilno]
+      _ = vsota' t := by simp [vsota']
