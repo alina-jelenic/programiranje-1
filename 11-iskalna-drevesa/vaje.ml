@@ -221,6 +221,7 @@ let rec delete x = function
  vrednosti, ga parametriziramo kot [('key, 'value) dict].
 [*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*)
 
+type ('key, 'value) dict = ('key * 'value) tree
 
 (*----------------------------------------------------------------------------*]
  Napišite testni primer [test_dict]:
@@ -231,6 +232,12 @@ let rec delete x = function
      "c":-2
 [*----------------------------------------------------------------------------*)
 
+let test_dict = 
+     Node (Node (Empty, ("a", 0), Empty),
+           ("b", 1),
+           Node (Node (Empty, ("c", -2), Empty),
+                 ("d", 2),
+                 Empty))
 
 (*----------------------------------------------------------------------------*]
  Funkcija [dict_get key dict] v slovarju poišče vrednost z ključem [key]. Ker
@@ -242,6 +249,13 @@ let rec delete x = function
  - : int option = Some (-2)
 [*----------------------------------------------------------------------------*)
 
+let rec dict_get key dict =
+     match dict with
+     | Empty -> None
+     | Node (l, (k', v), d) ->
+          if key = k' then Some v
+          else if key < k' then dict_get key l 
+          else dict_get key d
       
 (*----------------------------------------------------------------------------*]
  Funkcija [print_dict] sprejme slovar s ključi tipa [string] in vrednostmi tipa
@@ -259,6 +273,18 @@ let rec delete x = function
  - : unit = ()
 [*----------------------------------------------------------------------------*)
 
+let print_dict dict =
+     let rec aux tree =
+          match tree with
+          | Empty -> ()
+          | Node (l, (k, v), d) ->
+               aux l;
+               print_string (k ^ " : ");
+               print_int v;
+               print_newline ();
+               aux d
+     in
+     aux dict
 
 (*----------------------------------------------------------------------------*]
  Funkcija [dict_insert key value dict] v slovar [dict] pod ključ [key] vstavi
@@ -279,6 +305,17 @@ let rec delete x = function
  - : unit = ()
 [*----------------------------------------------------------------------------*)
 
+let dict_insert key value dict =
+     let rec aux tree =
+          match tree with
+          | Empty -> leaf (key, value)
+          | Node (l, (k', v'), d) ->
+               if key = k' then Node (l, (k', value), d)
+               else if key < k' then Node (aux l, (k', v'), d)
+               else Node (l, (k', v'), aux d)
+     in
+     aux dict
+
 (*----------------------------------------------------------------------------*]
  Napišite primerno signaturo za slovarje [DICT] in naredite implementacijo
  modula z drevesi. 
@@ -286,7 +323,12 @@ let rec delete x = function
  Modul naj vsebuje prazen slovar [empty] in pa funkcije [get], [insert] in
  [print] (print naj ponovno deluje zgolj na [(string, int) t].
 [*----------------------------------------------------------------------------*)
-
+module StringMap = Map.Make (String)
+module PairMap = Map.Make (struct
+  type t = string * int
+  
+  let compare = compare
+end)
 
 (*----------------------------------------------------------------------------*]
  Funkcija [count (module Dict) list] prešteje in izpiše pojavitve posameznih

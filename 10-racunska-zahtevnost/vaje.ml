@@ -18,13 +18,29 @@ Natančno definirajte pogoje, da funkcija `f` uredi seznam.
  - : int list = [7]
 [*----------------------------------------------------------------------------*)
 
+let rec insert y xs = 
+  match xs with
+  | [] -> [y]
+  | x :: xs' ->
+    if x >= y then y :: xs
+    else x :: (insert y xs')
 
 (*----------------------------------------------------------------------------*]
  Prazen seznam je že urejen. Funkcija [insert_sort] uredi seznam tako da
  zaporedoma vstavlja vse elemente seznama v prazen seznam.
 [*----------------------------------------------------------------------------*)
 
+let rec insert_sort sez =
+  let rec aux s1 s2 = 
+    match s1 with
+    | [] -> s2
+    | x :: xs -> aux (xs) (insert x s2)
+  in
+  aux sez []
 
+let rec insert_sort' xs =
+  match xs with [] -> [] (* O(1) *) | x :: xs' -> insert x (insert_sort xs')
+(* n - 1 + f(n-1) *)
 
 (*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*]
  Urejanje z Izbiranjem
@@ -72,6 +88,10 @@ Natančno definirajte pogoje, da funkcija `f` uredi seznam.
  - : int array = [|0; 4; 2; 3; 1|]
 [*----------------------------------------------------------------------------*)
 
+let swap a i j =
+  let tmp = a.(i) in
+  a.(i) <- a.(j);
+  a.(j) <- tmp
 
 (*----------------------------------------------------------------------------*]
  Funkcija [index_min a lower upper] poišče indeks najmanjšega elementa tabele
@@ -80,37 +100,77 @@ Natančno definirajte pogoje, da funkcija `f` uredi seznam.
  index_min [|0; 2; 9; 3; 6|] 2 4 = 3
 [*----------------------------------------------------------------------------*)
 
+let index_min a lower upper =
+  let min = ref lower in
+  for i = lower to upper do
+    if a.(i) < a.(!min) then min := i
+  done;
+  !min
 
 (*----------------------------------------------------------------------------*]
  Funkcija [selection_sort_array] implementira urejanje z izbiranjem na mestu. 
 [*----------------------------------------------------------------------------*)
 
+let selection_sort_array a =
+  let index_end = Array.length a - 1 in
+  (* Every step moves boundary_sorted one place to the right. *)
+  for boundary_sorted = 0 to index_end do
+    let i = index_min a boundary_sorted index_end in
+    swap a i boundary_sorted
+  done
 
 (*----------------------------------------------------------------------------*]
- Funkcija [min_and_rest list] vrne par [Some (z, list')] tako da je [z]
- najmanjši element v [list] in seznam [list'] enak [list] z odstranjeno prvo
- pojavitvijo elementa [z]. V primeru praznega seznama vrne [None]. 
-[*----------------------------------------------------------------------------*)
+   Funkcija [min_and_rest list] vrne par [Some (z, list')] tako da je [z]
+   najmanjši element v [list] in seznam [list'] enak [list] z odstranjeno prvo
+   pojavitvijo elementa [z]. V primeru praznega seznama vrne [None].
+  [*----------------------------------------------------------------------------*)
+
+let min_and_rest list =
+  let rec remove_one z = function
+    | [] -> failwith "not found"
+    | x :: xs -> if x = z then xs else x :: remove_one z xs
+  in
+  let rec find_min current_min = function
+    | [] -> current_min
+    | x :: xs -> find_min (min x current_min) xs
+  in
+  match list with
+  | [] -> None
+  | x :: xs ->
+      let z = find_min x xs in
+      Some (z, remove_one z (x :: xs))
 
 (*----------------------------------------------------------------------------*]
- Funkcija [selection_sort] je implementacija zgoraj opisanega algoritma.
- Namig: Uporabi [min_and_rest] iz prejšnje naloge.
-[*----------------------------------------------------------------------------*)
+   Funkcija [selection_sort] je implementacija zgoraj opisanega algoritma.
+   Namig: Uporabi [min_and_rest] iz prejšnje naloge.
+  [*----------------------------------------------------------------------------*)
 
+let selection_sort list =
+  let rec aux sorted unsorted =
+    match min_and_rest unsorted with
+    | None -> List.rev sorted
+    | Some (x, unsorted') -> aux (x :: sorted) unsorted'
+  in
+  aux [] list
 
 (*----------------------------------------------------------------------------*]
- Funkcija [randlist len max] generira seznam dolžine [len] z naključnimi
- celimi števili med 0 in [max].
- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- # let l = randlist 10 10 ;;
- val l : int list = [0; 1; 0; 4; 0; 9; 1; 2; 5; 4]
-[*----------------------------------------------------------------------------*)
+   Funkcija [randlist len max] generira seznam dolžine [len] z naključnimi
+   celimi števili med 0 in [max].
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   # let l = randlist 10 10 ;;
+   val l : int list = [0; 1; 0; 4; 0; 9; 1; 2; 5; 4]
+  [*----------------------------------------------------------------------------*)
 
+let rec randlist len max =
+  if len <= 0 then [] else Random.int max :: randlist (len - 1) max
 
 (*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*]
- Sedaj lahko s pomočjo [randlist] primerjamo našo urejevalno funkcijo (imenovana
- [our_sort] v spodnjem primeru) z urejevalno funkcijo modula [List]. Prav tako
- lahko na manjšem seznamu preverimo v čem je problem.
- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- let test = (randlist 100 100) in (our_sort test = List.sort compare test);;
-[*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*)
+   Sedaj lahko s pomočjo [randlist] primerjamo našo urejevalno funkcijo (imenovana
+   [our_sort] v spodnjem primeru) z urejevalno funkcijo modula [List]. Prav tako
+   lahko na manjšem seznamu preverimo v čem je problem.
+   - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   let test = (randlist 100 100) in (our_sort test = List.sort compare test);;
+  [*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*)
+let test_sort () =
+  let test = randlist 100 100 in
+  assert (selection_sort test = List.sort compare test)
