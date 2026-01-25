@@ -11,12 +11,44 @@ from functools import cache
 # podzaporedje `[2, 3, 4, 4, 6, 7, 8, 9]`.
 # -----------------------------------------------------------------------------
 
+def najdaljse_narascajoce_podzaporedje(sez):
+    n = len(sez)
+    rezultati = [[] for _ in range(n)]
+    for i in range(n-1, -1, -1):
+        rezultati[i] = [sez[i]]
+        for j in range(i + 1, n):
+            if sez[j] >= sez[i]:
+                narascajoc_podseznam = [sez[i]] + rezultati[j]
+                if len(narascajoc_podseznam) > len(rezultati):
+                    rezultati[i] = narascajoc_podseznam  
+    najdaljsi_podseznam = []
+    for podseznam in rezultati:     
+        if len(podseznam) > len(najdaljsi_podseznam):
+            najdaljsi_podseznam = podseznam     
+    return najdaljsi_podseznam
+
 # -----------------------------------------------------------------------------
 # Rešitev sedaj popravite tako, da funkcija `vsa_najdaljsa` vrne seznam vseh
 # najdaljših naraščajočih podzaporedij.
 # -----------------------------------------------------------------------------
 
+def vsa_najdaljsa(sez):
+    n = len(sez)
+    rezultati = [[] for _ in range(n)]
+    koncne_resitve = [[]]
+    for i in range(n-1, -1, -1):
+        rezultati[i] = [sez[i]]
+        for j in range(i + 1, n):
+            if sez[j] >= sez[i]:
+                narascajoc_podseznam = [sez[i]] + rezultati[j]
+                if len(narascajoc_podseznam) > len(rezultati):
+                    rezultati[i] = narascajoc_podseznam  
+        if len(rezultati[i]) > len(koncne_resitve[0]):
+            koncne_resitve = rezultati[i]
+        elif len(rezultati[i]) == len(koncne_resitve[0]):
+            koncne_resitve.append(rezultati[i])
 
+    return koncne_resitve
 
 # =============================================================================
 # Žabica
@@ -43,7 +75,22 @@ from functools import cache
 # dva.
 # =============================================================================
 
-
+def zabica(mocvara):
+    n = len(mocvara)
+    @cache
+    def zaba(i, e):
+        if i > n:
+            return 0
+        if i + e >= n:
+            return 1
+        najmanj_skokov = n
+        for s in range(1, e + 1):
+            nov_i = i + s
+            nov_e = e - s + mocvara[nov_i]
+            st_skokov = 1 + zaba(nov_i, nov_e)
+            najmanj_skokov = min(najmanj_skokov, st_skokov)
+        return najmanj_skokov
+    return zaba(0, mocvara[0])
 
 # =============================================================================
 # Nageljni
@@ -65,6 +112,25 @@ from functools import cache
 #     [1, 1, 0, 0, 1, 1, 0, 1, 1]
 #     [0, 1, 1, 0, 1, 1, 0, 1, 1]
 # =============================================================================
+
+def nageljni(n, m, l):
+    # bazni racun
+    if m * l + (m - 1) > n:
+        return []
+    if m == 0:
+        return [[0] * n]
+    # rekurzija
+    postavitve = []
+    # imamo korito
+    for resitev in nageljni(n - l - 1, m -1, l):
+        nova_postavitev = [1] * l + [0] + resitev
+        postavitve.append(nova_postavitev)
+    # nimamo korita
+    for resitev in nageljni(n - 1, m, l):
+        nova_postavitev = [0] + resitev
+        postavitve.append(nova_postavitev)
+    
+    return postavitve
 
 
 
@@ -111,7 +177,24 @@ from functools import cache
 # seznam indeksov mest, v katerih se Mortimer ustavi.
 # =============================================================================
 
-
+def pobeg(mesta):
+    @cache
+    def najdi_pot(trenutno_mesto, denar):
+        if trenutno_mesto >= len(mesta):
+            if denar >= 0:
+                return [trenutno_mesto]
+            else:
+                return None
+        moznosti = mesta[trenutno_mesto]
+        najkrajsa_pot = None
+        for cilj, strosek in moznosti:
+            nova_pot = najdi_pot(cilj, denar + strosek)
+            if nova_pot is not None:
+                pot = [trenutno_mesto] + nova_pot
+                if najkrajsa_pot is None or len(pot) < len(najkrajsa_pot):
+                    najkrajsa_pot = pot
+        return najkrajsa_pot
+    return najdi_pot(0, 0)
 
 # =============================================================================
 # Pričetek robotske vstaje
@@ -148,3 +231,6 @@ from functools import cache
 # 
 # medtem ko iz vrste 5 in stolpca 0 ne more pobegniti.
 # =============================================================================
+
+def pot_pobega(soba, vrsta, stolpec, koraki):
+    pass
