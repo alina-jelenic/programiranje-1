@@ -214,10 +214,11 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
     | drevo -> drevo
   
   let uravnotezi drevo =
-    match drevo with
-    | Prazno -> Prazno
-    | Vozlisce node ->
-        let x = ravnotezni_faktor drevo in
+  match drevo with
+  | Prazno -> Prazno
+  | Vozlisce node ->
+      let x = ravnotezni_faktor drevo in
+      let novo_drevo = 
         if x > 1 then
           if ravnotezni_faktor node.levo >= 0 then
             rotiraj_desno drevo
@@ -230,6 +231,12 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
             rotiraj_desno_levo drevo
         else
           drevo
+      in
+      match novo_drevo with
+      | Prazno -> Prazno
+      | Vozlisce n -> 
+          Vozlisce { n with visina = 1 + max (visina n.levo) (visina n.desno) }
+          
   (**Funkcije iz signature*)
   let rec dodaj k v s = 
     match s with
@@ -347,15 +354,71 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
       | Less -> poisci_opt k node.levo
       | Greater -> poisci_opt k node.desno
 
-  let iter _ _ = assert false
-  let zlozi _ _ _ = assert false
-  let preslikaj _ _ = assert false
-  let preslikaji _ _ = assert false
-  let vsebuje _ _ = assert false
-  let za_vse _ _= assert false
-  let obstaja _ _= assert false
-  let v_seznam _ = assert false
-  let iz_seznama _ = assert false
+  let rec iter f s =
+    match s with
+    | Prazno -> ()
+    | Vozlisce node ->
+      iter f node.levo;
+      f node.kljuc node.vrednost;
+      iter f node.desno
+
+  let rec zlozi f s acc = 
+    match s with
+    | Prazno -> acc
+    | Vozlisce node -> 
+      let levi_acc = zlozi f node.levo acc in
+      let vozlisce_acc = f node.kljuc node.vrednost levi_acc in
+      zlozi f node.desno vozlisce_acc
+
+  let rec preslikaj f s = 
+    match s with
+    | Prazno -> Prazno
+    | Vozlisce node ->
+      let novo_levo = preslikaj f node.levo in
+      let novo_desno = preslikaj f node.desno in
+      ustvari_vozlisce novo_levo node.kljuc (f node.vrednost) novo_desno
+
+  let rec preslikaji f s = 
+    match s with
+    | Prazno -> Prazno
+    | Vozlisce node ->
+      let novo_levo = preslikaji f node.levo in
+      let novo_desno = preslikaji f node.desno in
+      ustvari_vozlisce novo_levo node.kljuc (f node.kljuc node.vrednost) novo_desno
+
+  let rec vsebuje k s = 
+    match s with
+    | Prazno -> false
+    | Vozlisce node ->
+      match U.primerjaj k node.kljuc with
+      | Equal -> true
+      | Less -> vsebuje k node.levo
+      | Greater -> vsebuje k node.desno
+
+  let rec za_vse f s = 
+    match s with
+    | Prazno -> true
+    | Vozlisce node -> 
+      (f node.kljuc node.vrednost) && (za_vse f node.levo) && (za_vse f node.desno)
+
+  let rec obstaja f s = 
+    match s with
+    | Prazno -> false
+    | Vozlisce node ->
+      if f node.kljuc node.vrednost then true
+      else obstaja f node.levo || obstaja f node.desno
+  let v_seznam s =
+    List.rev (zlozi (fun k v acc -> (k, v) :: acc) s [])
+
+  let iz_seznama sez = 
+    let rec aux seznam acc = 
+      match seznam with
+      | [] -> acc
+      | (x,y)::xs -> 
+        let nov = dodaj x y acc in
+        aux xs nov
+    in
+    aux sez prazen
 
   
 end
@@ -372,6 +435,16 @@ let slovar =
        | Some v -> Some ("sour " ^ v))
   |> SLOVAR_NIZ.preslikaj String.length
   |> SLOVAR_NIZ.v_seznam
+
+let slovar_po_popravi = 
+  SLOVAR_NIZ.iz_seznama [ ("jabolko", "apple"); ("banana", "banana"); ("cesnja", " cherry") ]
+  |> SLOVAR_NIZ.dodaj "datelj" "date"
+  |> SLOVAR_NIZ.odstrani "banana"
+  |> SLOVAR_NIZ.popravi "cesnja" (function None -> Some "cherry" | Some v -> Some ("sour " ^ v))
+
+let () = 
+  SLOVAR_NIZ.v_seznam slovar_po_popravi 
+  |> List.iter (fun (k,v) -> Printf.printf "%s -> %s\n" k v)
 
 (*----------------------------------------------------------------------------*
   ## Turingovi stroji
