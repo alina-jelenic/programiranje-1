@@ -253,45 +253,39 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
             uravnotezi (ustvari_vozlisce node.levo node.kljuc node.vrednost novo_desno)
 
     let rec odstrani k slovar = 
-    let rec odstrani_najmanjsi d =
-    match d with
-    | Prazno -> failwith "Napaka: odstrani_najmanjsi na praznem drevesu"
-    | Vozlisce { levo = Prazno; kljuc; vrednost; desno; _ } ->
-        (kljuc, vrednost), uravnotezi desno
-    | Vozlisce node ->
-        let par, novo_levo = odstrani_najmanjsi node.levo in
-        let novo_vozlisce = Vozlisce { node with levo = novo_levo } in
-        par, uravnotezi novo_vozlisce
-    in
-    match slovar with
-    | Prazno -> Prazno
-    | Vozlisce node -> 
-      match U.primerjaj k node.kljuc with 
-      | Equal ->
-        (match node.levo, node.desno with
-        | Prazno, Prazno -> Prazno
-        | _, Prazno -> uravnotezi node.levo
-        | Prazno, _ -> uravnotezi node.desno
-        | _, _ -> 
-          let (naslednik_kljuc, naslednik_vrednost), novo_desno = odstrani_najmanjsi node.desno
-          in
-          let novo_vozlisce =
-            Vozlisce {
-              levo = node.levo;
-              kljuc = naslednik_kljuc;
-              vrednost = naslednik_vrednost;
-              desno = novo_desno;
-              visina = 0; 
-            }
+      let rec odstrani_najmanjsi d =
+        match d with
+        | Prazno -> failwith "Napaka: odstrani_najmanjsi na praznem drevesu"
+        | Vozlisce { levo = Prazno; kljuc; vrednost; desno; _ } ->
+          (kljuc, vrednost), uravnotezi desno
+        | Vozlisce node ->
+          let par, novo_levo = odstrani_najmanjsi node.levo in
+          let novo_vozlisce =  ustvari_vozlisce novo_levo node.kljuc node.vrednost node.desno in
+          par, uravnotezi novo_vozlisce
+      in
+      match slovar with
+      | Prazno -> Prazno
+      | Vozlisce node -> 
+        match U.primerjaj k node.kljuc with 
+        | Equal ->
+          (match node.levo, node.desno with
+          | Prazno, Prazno -> Prazno
+          | _, Prazno -> uravnotezi node.levo
+          | Prazno, _ -> uravnotezi node.desno
+          | _, _ -> 
+            let (naslednik_kljuc, naslednik_vrednost), novo_desno = odstrani_najmanjsi node.desno
+            in
+            let novo_vozlisce =
+              ustvari_vozlisce node.levo naslednik_kljuc naslednik_vrednost novo_desno
           in
           uravnotezi novo_vozlisce)
 
-      | Less ->
-        let novo_levo = odstrani k node.levo in
-        uravnotezi (Vozlisce { node with levo = novo_levo }) 
-      | Greater ->
-        let novo_desno = odstrani k node.desno in
-        uravnotezi (Vozlisce {node with desno = novo_desno})
+        | Less ->
+          let novo_levo = odstrani k node.levo in
+          uravnotezi (Vozlisce { node with levo = novo_levo }) 
+        | Greater ->
+          let novo_desno = odstrani k node.desno in
+          uravnotezi (Vozlisce {node with desno = novo_desno})
 
   let rec popravi k f s = 
     match s with
@@ -301,7 +295,7 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
       | None -> Prazno
       | Some x -> dodaj k x s)
     | Vozlisce node -> 
-      (match U.primerjaj node.kljuc k with
+      (match U.primerjaj k node.kljuc with
       | Equal -> 
         let rezultat = f (Some node.vrednost) in 
         (match rezultat with
@@ -349,7 +343,7 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
     match s with
     | Prazno -> None
     | Vozlisce node -> 
-      match U.primerjaj node.kljuc k with
+      match U.primerjaj k node.kljuc with
       | Equal -> Some node.vrednost
       | Less -> poisci_opt k node.levo
       | Greater -> poisci_opt k node.desno
@@ -435,16 +429,6 @@ let slovar =
        | Some v -> Some ("sour " ^ v))
   |> SLOVAR_NIZ.preslikaj String.length
   |> SLOVAR_NIZ.v_seznam
-
-let slovar_po_popravi = 
-  SLOVAR_NIZ.iz_seznama [ ("jabolko", "apple"); ("banana", "banana"); ("cesnja", " cherry") ]
-  |> SLOVAR_NIZ.dodaj "datelj" "date"
-  |> SLOVAR_NIZ.odstrani "banana"
-  |> SLOVAR_NIZ.popravi "cesnja" (function None -> Some "cherry" | Some v -> Some ("sour " ^ v))
-
-let () = 
-  SLOVAR_NIZ.v_seznam slovar_po_popravi 
-  |> List.iter (fun (k,v) -> Printf.printf "%s -> %s\n" k v)
 
 (*----------------------------------------------------------------------------*
   ## Turingovi stroji
