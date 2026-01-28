@@ -323,21 +323,19 @@ module MAKE_SLOVAR (U : UREJEN_TIP) : SLOVAR with type kljuc = U.t = struct
     | Prazno -> []
     | Vozlisce node -> (vrednosti node.levo) @ [node.vrednost] @ (vrednosti node.desno)
 
-  let najmanjsi_opt s = 
-    let k = kljuci s in
-    let v = vrednosti s in 
-    match k, v with
-    | [], _ -> None
-    | x :: xs, y :: ys -> Some (x, y)
-    | _, [] -> None
+  let rec najmanjsi_opt s = 
+    match s with
+    | Prazno -> None
+    | Vozlisce node ->
+      if node.levo = Prazno then Some (node.kljuc, node.vrednost)
+      else najmanjsi_opt node.levo
 
-  let najvecji_opt s = 
-    let k = List.rev (kljuci s) in
-    let v = List.rev (vrednosti s) in
-    match k, v with
-    | [], _ -> None
-    | x :: xs, y :: ys -> Some (x, y)
-    | _, [] -> None
+  let rec najvecji_opt s = 
+    match s with
+    | Prazno -> None
+    | Vozlisce node ->
+      if node.desno = Prazno then Some (node.kljuc, node.vrednost)
+      else najvecji_opt node.desno
 
   let rec poisci_opt k s = 
     match s with
@@ -548,18 +546,78 @@ end
   Za dodatne točke je časovna zahtevnost iskanja prehoda v funkciji
   `speed_run` z nekaj preprocesiranja konstantna.
 [*----------------------------------------------------------------------------*)
+module PAR_NIZ_CHAR_UREJEN : UREJEN_TIP with type t = string * char = struct
+  type t = string * char
 
-module MachineUcinkovito : MACHINE = struct
-  type t = unit
-
-  let make _ _ = assert false
-  let initial _ = assert false
-  let add_transition _ _ _ _ _ = assert false
-  let step _ _ _ = assert false
-  let run _ _ = assert false
-  let speed_run _ _ = assert false
+  let primerjaj (s1, c1) (s2, c2) =
+    match STRING_UREJEN_TIP.primerjaj s1 s2 with
+    | Equal -> if c1 < c2 then Less else if c1 > c2 then Greater else Equal
+    | other -> other
 end
 
+module SLOVAR_PAR = MAKE_SLOVAR (PAR_NIZ_CHAR_UREJEN)
+
+module MachineUcinkovito : MACHINE = struct
+  type transition = state * char * direction
+  type t = {
+    initial : state;
+    transitions : transition SLOVAR_PAR.t;
+  }
+
+  let make initial _states = { initial; transitions = SLOVAR_PAR.prazen }
+
+  let initial { initial } = initial
+
+  let add_transition st chr st' chr' dir tm =
+    let kljuc = (st, chr) in
+    let vrednost = (st', chr', dir) in
+    { tm with transitions = SLOVAR_PAR.dodaj kljuc vrednost tm.transitions}
+
+  let step tm st tape =
+    let chr = Tape.read tape in
+    let k = (st, chr) in
+    match
+      SLOVAR_PAR.poisci_opt k tm.transitions
+    with
+    | None -> None
+    | Some (st, chr', dir) -> Some (st, tape |> Tape.write chr' |> Tape.move dir)
+        
+  let run tm str =
+    let rec step' (st, tape) =
+      (Tape.print tape;
+      print_endline st;
+      match step tm st tape with
+      | None -> ()
+      | Some config' -> step' config')
+    in
+    step' (initial tm, Tape.make str)
+
+  let speed_run tm str =
+    let open Hashtbl in
+    let h = create (SLOVAR_PAR.velikost tm.transitions + 10) in
+    let () = SLOVAR_PAR.iter (fun k v -> add h k v) tm.transitions in
+    let step' st tape =
+      let chr = Tape.read tape in
+      match find_opt h (st, chr) with
+      | None -> None
+      | Some (st', chr', dir) -> Some (st', tape |> Tape.write chr' |> Tape.move dir)
+    in
+    let rec loop (st, tape) =
+      match step' st tape with
+      | None -> Tape.print tape
+      | Some x -> loop x
+    in
+    loop (initial tm, Tape.make str)
+end
+(*----------------------------------------------------------------------------*
+Analiza računske zahtevnosti:
+- `add_transition`: Prej je imela računsko zahtevnost O(1), sedaj pa ima 
+računsko zahtevnost enako računski zahtevnosti funkcije dodaj (iz slovarjev) 
+torej s O(logn).
+- `step`: Prej je imela računsko zahtevnost O(n), saj je v najslabšem primeru
+morala iti čez cel seznam, sedaj pa ima enako računsko zahtevnost kot 
+poisci_opt iz slovarja torej O(logn)
+[*----------------------------------------------------------------------------*)
 
 (*----------------------------------------------------------------------------*
   Sestavite Turingov stroj, ki na vhodnem nizu prepozna palindrom (iz `0` in
