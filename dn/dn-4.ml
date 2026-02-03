@@ -609,6 +609,7 @@ module MachineUcinkovito : MACHINE = struct
     in
     loop (initial tm, Tape.make str)
 end
+
 (*----------------------------------------------------------------------------*
 Analiza računske zahtevnosti:
 - `add_transition`: Prej je imela računsko zahtevnost O(1), sedaj pa ima 
@@ -625,7 +626,55 @@ poisci_opt iz slovarja torej O(logn)
   sicer `0`.
 [*----------------------------------------------------------------------------*)
 
-let palindrom_stroj : MachineUcinkovito.t = assert false
+(*ideja: https://stackoverflow.com/questions/78480329/turing-machine-transition-table-for-checking-a-palindrome*)
+
+let palindrom_stroj : MachineUcinkovito.t =
+  let open MachineUcinkovito in
+  make "zacni" []
+    (* zacni: vzemi prvi ne-blank znak; če je blank → sprejmi *)
+  |> add_transition "zacni" '0' "isci_0" ' ' Right
+  |> add_transition "zacni" '1' "isci_1" ' ' Right
+  |> add_transition "zacni" ' ' "zapis_1" ' ' Right
+
+    (* isci_0: pomik desno do konca niza *)
+  |> add_transition "isci_0" '0' "isci_0" '0' Right
+  |> add_transition "isci_0" '1' "isci_0" '1' Right
+  |> add_transition "isci_0" ' ' "preveri_zadnji_0" ' ' Left
+
+    (* preveri_zadnji_0: preveri zadnji simbol *)
+  |> add_transition "preveri_zadnji_0" '0' "vrni_se_levo" ' ' Left     
+  |> add_transition "preveri_zadnji_0" '1' "brisi_levo" ' ' Left  
+  |> add_transition "preveri_zadnji_0" ' ' "zapis_1" ' ' Right         
+
+    (* isci_1 / preveri_zadnji_1 – analogno za 1 *)
+  |> add_transition "isci_1" '0' "isci_1" '0' Right
+  |> add_transition "isci_1" '1' "isci_1" '1' Right
+  |> add_transition "isci_1" ' ' "preveri_zadnji_1" ' ' Left
+
+  |> add_transition "preveri_zadnji_1" '1' "vrni_se_levo" ' ' Left
+  |> add_transition "preveri_zadnji_1" '0' "brisi_levo" ' ' Left
+  |> add_transition "preveri_zadnji_1" ' ' "zapis_1" ' ' Right
+
+    (* vrni_se_levo: vrnemo se na levi rob *)
+  |> add_transition "vrni_se_levo" '0' "vrni_se_levo" '0' Left
+  |> add_transition "vrni_se_levo" '1' "vrni_se_levo" '1' Left
+  |> add_transition "vrni_se_levo" ' ' "zacni" ' ' Right
+
+    (* brisi_levo: pri neskladju gremo levo do začetka *)
+  |> add_transition "brisi_levo" '0' "brisi_levo" ' ' Left
+  |> add_transition "brisi_levo" '1' "brisi_levo" ' ' Left
+  |> add_transition "brisi_levo" ' ' "zapis_0" ' ' Right
+
+    (* zapis_1: napišemo 1 na prvo celico in koncamo *)
+  |> add_transition "zapis_1" '0' "koncaj" '1' Right
+  |> add_transition "zapis_1" '1' "koncaj" '1' Right
+  |> add_transition "zapis_1" ' ' "koncaj" '1' Right
+
+    (* zapis_0: napišemo 0 na prvo celico in koncamo *)
+  |> add_transition "zapis_0" '0' "koncaj" '0' Right
+  |> add_transition "zapis_0" '1' "koncaj" '0' Right
+  |> add_transition "zapis_0" ' ' "koncaj" '0' Right
+
 
 (*----------------------------------------------------------------------------*
   Sestavite Turingov stroj, ki na vhod sprejme niz `n` enic in na koncu na
