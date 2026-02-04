@@ -705,4 +705,69 @@ let dvojski_stroj : MachineUcinkovito.t = assert false
   oklepaji pravilno uravnoteženi in gnezdeni, ter `0` sicer.
 [*----------------------------------------------------------------------------*)
 
-let uravnotezeni_oklepaji_stroj : MachineUcinkovito.t = assert false
+let uravnotezeni_oklepaji_stroj : MachineUcinkovito.t = 
+  let open MachineUcinkovito in
+  make "start" []
+  |> add_transition "start" '(' "start" '(' Right
+  |> add_transition "start" '[' "start" '[' Right
+  |> add_transition "start" '{' "start" '{' Right
+  |> add_transition "start" 'x' "start" 'x' Right
+  |> add_transition "start" ')' "zapomni(" ')' Left
+  |> add_transition "start" ']' "zapomni[" ']' Left
+  |> add_transition "start" '}' "zapomni{" '}' Left
+  |> add_transition "start" ' ' "preveri" ' ' Left
+    
+  |> add_transition "zapomni(" 'x' "zapomni(" 'x' Left 
+  |> add_transition "zapomni(" '(' "popravi(" 'x' Right
+  |> add_transition "zapomni(" '[' "brisanje" '[' Right
+  |> add_transition "zapomni(" '{' "brisanje" '{' Right
+  |> add_transition "zapomni(" ']' "brisanje" ']' Right
+  |> add_transition "zapomni(" '}' "brisanje" '}' Right
+  |> add_transition "zapomni(" ')' "brisanje" ')' Right
+    
+  |> add_transition "zapomni[" 'x' "zapomni[" 'x' Left 
+  |> add_transition "zapomni[" '[' "popravi[" 'x' Right
+  |> add_transition "zapomni[" '(' "brisanje" '(' Right
+  |> add_transition "zapomni[" '{' "brisanje" '{' Right
+  |> add_transition "zapomni[" ']' "brisanje" ']' Right
+  |> add_transition "zapomni[" '}' "brisanje" '}' Right
+  |> add_transition "zapomni[" ')' "brisanje" ')' Right
+    
+  |> add_transition "zapomni{" 'x' "zapomni{" 'x' Left 
+  |> add_transition "zapomni{" '{' "popravi{" 'x' Right
+  |> add_transition "zapomni{" '(' "brisanje" '(' Right
+  |> add_transition "zapomni{" '[' "brisanje" '[' Right
+  |> add_transition "zapomni{" ']' "brisanje" ']' Right
+  |> add_transition "zapomni{" '}' "brisanje" '}' Right
+  |> add_transition "zapomni{" ')' "brisanje" ')' Right
+    
+  |> add_transition "popravi(" 'x' "popravi(" 'x' Right
+  |> add_transition "popravi(" ')' "start" 'x' Right
+  |> add_transition "popravi[" 'x' "popravi[" 'x' Right
+  |> add_transition "popravi[" ']' "start" 'x' Right
+  |> add_transition "popravi{" 'x' "popravi{" 'x' Right
+  |> add_transition "popravi{" '}' "start" 'x' Right
+    
+  |> add_transition "preveri" ' ' "konec" '1' Right
+  |> add_transition "preveri" 'x' "preveri" ' ' Left
+  |> add_transition "preveri" '(' "brisanje" '(' Right
+  |> add_transition "preveri" '[' "brisanje" '[' Right
+  |> add_transition "preveri" '{' "brisanje" '{' Right
+    
+  |> add_transition "brisanje" 'x' "brisanje" 'x' Right
+  |> add_transition "brisanje" '(' "brisanje" '(' Right
+  |> add_transition "brisanje" ')' "brisanje" ')' Right
+  |> add_transition "brisanje" '[' "brisanje" '[' Right
+  |> add_transition "brisanje" ']' "brisanje" ']' Right
+  |> add_transition "brisanje" '{' "brisanje" '{' Right
+  |> add_transition "brisanje" '}' "brisanje" '}' Right
+  |> add_transition "brisanje" ' ' "brisi" ' ' Left
+    
+  |> add_transition "brisi" 'x' "brisi" 'x' Left
+  |> add_transition "brisi" '(' "brisi" ' ' Left
+  |> add_transition "brisi" ')' "brisi" ' ' Left
+  |> add_transition "brisi" '[' "brisi" ' ' Left
+  |> add_transition "brisi" ']' "brisi" ' ' Left
+  |> add_transition "brisi" '{' "brisi" ' ' Left
+  |> add_transition "brisi" '}' "brisi" ' ' Left
+  |> add_transition "brisi" ' ' "konec" '0' Right
