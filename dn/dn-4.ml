@@ -784,14 +784,43 @@ let enice_stroj : MachineUcinkovito.t =
   |> add_transition "pocisti" '1' "pocisti" ' ' Right
   |> add_transition "pocisti" 'X' "koncaj" ' ' Right
 
-
 (*----------------------------------------------------------------------------*
   Sestavite ravno obratni Turingov stroj, torej tak, ki na začetku na traku
   sprejme število `n` enic, na koncu pa naj bo na traku zapisano število `n`
   v dvojiškem zapisu.
 [*----------------------------------------------------------------------------*)
 
-let dvojski_stroj : MachineUcinkovito.t = assert false
+(*ideja: vzameš enko na zacetku in jo pristeješ binarnemu številu*)
+
+let dvojski_stroj : MachineUcinkovito.t =
+  let open MachineUcinkovito in
+  make "zacetek" [] 
+  |> add_transition "zacetek" ' ' "konec" '0' Right 
+  |> add_transition "zacetek" '1' "priprava" '1' Left
+ 
+  |> add_transition "priprava" ' ' "priprava1" 'X' Left
+  |> add_transition "priprava1" ' ' "na_konec" '0' Right
+   
+  |> add_transition "na_konec" '1' "na_konec" '1' Right
+  |> add_transition "na_konec" '0' "na_konec" '0' Right
+  |> add_transition "na_konec" 'X' "na_konec" 'X' Right
+  |> add_transition "na_konec" ' ' "vzemi" ' ' Left
+   
+  |> add_transition "vzemi" '1' "dodaj" ' ' Left
+  |> add_transition "vzemi" 'X' "konec" ' ' Left
+  |> add_transition "vzemi" ' ' "konec" ' ' Left        
+
+  |> add_transition "dodaj" '1' "dodaj" '1' Left
+  |> add_transition "dodaj" 'X' "desno" 'X' Left
+   
+  |> add_transition "desno" '1' "desno" '1' Right
+  |> add_transition "desno" '0' "desno" '0' Right
+  |> add_transition "desno" ' ' "prenesi" ' ' Left
+  |> add_transition "desno" 'X' "prenesi" 'X' Left
+   
+  |> add_transition "prenesi" '1' "prenesi" '0' Left
+  |> add_transition "prenesi" '0' "na_konec" '1' Right
+  |> add_transition "prenesi" ' ' "na_konec" '1' Right
 
 (*----------------------------------------------------------------------------*
   Sestavite Turingov stroj, ki na začetku na traku sprejme oklepaje `(` in
