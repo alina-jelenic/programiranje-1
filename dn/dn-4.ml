@@ -626,27 +626,23 @@ poisci_opt iz slovarja torej O(logn)
   sicer `0`.
 [*----------------------------------------------------------------------------*)
 
-(*ideja: https://stackoverflow.com/questions/78480329/turing-machine-transition-table-for-checking-a-palindrome*)
+(*Ideja: poisci prvi znak in preveri če je enak zadnjemu in tako nadaljuj*)
 
 let palindrom_stroj : MachineUcinkovito.t =
   let open MachineUcinkovito in
   make "zacni" []
-    (* zacni: vzemi prvi ne-blank znak; če je blank → sprejmi *)
   |> add_transition "zacni" '0' "isci_0" ' ' Right
   |> add_transition "zacni" '1' "isci_1" ' ' Right
   |> add_transition "zacni" ' ' "zapis_1" ' ' Right
 
-    (* isci_0: pomik desno do konca niza *)
   |> add_transition "isci_0" '0' "isci_0" '0' Right
   |> add_transition "isci_0" '1' "isci_0" '1' Right
   |> add_transition "isci_0" ' ' "preveri_zadnji_0" ' ' Left
 
-    (* preveri_zadnji_0: preveri zadnji simbol *)
   |> add_transition "preveri_zadnji_0" '0' "vrni_se_levo" ' ' Left     
   |> add_transition "preveri_zadnji_0" '1' "brisi_levo" ' ' Left  
   |> add_transition "preveri_zadnji_0" ' ' "zapis_1" ' ' Right         
 
-    (* isci_1 / preveri_zadnji_1 – analogno za 1 *)
   |> add_transition "isci_1" '0' "isci_1" '0' Right
   |> add_transition "isci_1" '1' "isci_1" '1' Right
   |> add_transition "isci_1" ' ' "preveri_zadnji_1" ' ' Left
@@ -655,22 +651,18 @@ let palindrom_stroj : MachineUcinkovito.t =
   |> add_transition "preveri_zadnji_1" '0' "brisi_levo" ' ' Left
   |> add_transition "preveri_zadnji_1" ' ' "zapis_1" ' ' Right
 
-    (* vrni_se_levo: vrnemo se na levi rob *)
   |> add_transition "vrni_se_levo" '0' "vrni_se_levo" '0' Left
   |> add_transition "vrni_se_levo" '1' "vrni_se_levo" '1' Left
   |> add_transition "vrni_se_levo" ' ' "zacni" ' ' Right
 
-    (* brisi_levo: pri neskladju gremo levo do začetka *)
   |> add_transition "brisi_levo" '0' "brisi_levo" ' ' Left
   |> add_transition "brisi_levo" '1' "brisi_levo" ' ' Left
   |> add_transition "brisi_levo" ' ' "zapis_0" ' ' Right
 
-    (* zapis_1: napišemo 1 na prvo celico in koncamo *)
   |> add_transition "zapis_1" '0' "koncaj" '1' Right
   |> add_transition "zapis_1" '1' "koncaj" '1' Right
   |> add_transition "zapis_1" ' ' "koncaj" '1' Right
 
-    (* zapis_0: napišemo 0 na prvo celico in koncamo *)
   |> add_transition "zapis_0" '0' "koncaj" '0' Right
   |> add_transition "zapis_0" '1' "koncaj" '0' Right
   |> add_transition "zapis_0" ' ' "koncaj" '0' Right
@@ -680,6 +672,8 @@ let palindrom_stroj : MachineUcinkovito.t =
   Sestavite Turingov stroj, ki na vhod sprejme niz `n` enic in na koncu na
   traku zapiše `n^2` enic.
 [*----------------------------------------------------------------------------*)
+
+(*Ideja: za vsake od enic, na drugo stran prepises n enic*)
 
 let kvadrat_stroj : MachineUcinkovito.t =
   let open MachineUcinkovito in
@@ -699,7 +693,6 @@ let kvadrat_stroj : MachineUcinkovito.t =
   |> add_transition "poisci1" '1' "start_inner" 'Y' Right  (* označi kot Y in začni dodajanje n enic *)
   |> add_transition "poisci1" 'X' "clean1" 'X' Left          (* vse obdelano → čiščenje *)
 
-  (* start_inner → pojdi na levi rob za notranjo zanko *)
   |> add_transition "start_inner" '1' "pojdi_levo_inner" '1' Left
   |> add_transition "start_inner" 'X' "pojdi_levo_inner" 'X' Left
   |> add_transition "pojdi_levo_inner" '1' "pojdi_levo_inner" '1' Left
@@ -708,41 +701,38 @@ let kvadrat_stroj : MachineUcinkovito.t =
   |> add_transition "pojdi_levo_inner" ' ' "inner_sweep" ' ' Right
 
   (* inner_sweep: pregleduj levo stran in za vsak simbol dodaj eno 1 na desno *)
-  |> add_transition "inner_sweep" '1' "carry_from1" 'Z' Right  (* začasno Z, zapomni 1 *)
-  |> add_transition "inner_sweep" 'Y' "carry_fromY" 'Z' Right  (* začasno Z, zapomni Y *)
-  |> add_transition "inner_sweep" 'X' "pojdi_levo_for_next" 'X' Left  (* notranja zanka končana *)
+  |> add_transition "inner_sweep" '1' "vzemi1" 'Z' Right  (* začasno Z, zapomni 1 *)
+  |> add_transition "inner_sweep" 'Y' "vzemiY" 'Z' Right  (* začasno Z, zapomni Y *)
+  |> add_transition "inner_sweep" 'X' "pojdi_levo" 'X' Left  (* notranja zanka končana *)
 
-  (* carry_from1 / carry_fromY: pojdi desno in dodaj 1 na konec rezultata *)
-  |> add_transition "carry_from1" '1' "carry_from1" '1' Right
-  |> add_transition "carry_from1" 'Y' "carry_from1" 'Y' Right
-  |> add_transition "carry_from1" 'X' "carry_from1" 'X' Right
-  |> add_transition "carry_from1" 'Z' "carry_from1" 'Z' Right
-  |> add_transition "carry_from1" ' ' "return_from1" '1' Left    (* dodaj 1 in vrni se *)
+  (* vzemi1 / vzemiY: pojdi desno in dodaj 1 na konec rezultata *)
+  |> add_transition "vzemi1" '1' "vzemi1" '1' Right
+  |> add_transition "vzemi1" 'Y' "vzemi1" 'Y' Right
+  |> add_transition "vzemi1" 'X' "vzemi1" 'X' Right
+  |> add_transition "vzemi1" 'Z' "vzemi1" 'Z' Right
+  |> add_transition "vzemi1" ' ' "vrni1" '1' Left    
 
-  |> add_transition "carry_fromY" '1' "carry_fromY" '1' Right
-  |> add_transition "carry_fromY" 'Y' "carry_fromY" 'Y' Right
-  |> add_transition "carry_fromY" 'X' "carry_fromY" 'X' Right
-  |> add_transition "carry_fromY" 'Z' "carry_fromY" 'Z' Right
-  |> add_transition "carry_fromY" ' ' "return_fromY" '1' Left
+  |> add_transition "vzemiY" '1' "vzemiY" '1' Right
+  |> add_transition "vzemiY" 'Y' "vzemiY" 'Y' Right
+  |> add_transition "vzemiY" 'X' "vzemiY" 'X' Right
+  |> add_transition "vzemiY" 'Z' "vzemiY" 'Z' Right
+  |> add_transition "vzemiY" ' ' "vrniY" '1' Left
 
-  (* return_from : vrni se levo, obnovi Z in nadaljuj sweep *)
-  |> add_transition "return_from1" '1' "return_from1" '1' Left
-  |> add_transition "return_from1" 'Y' "return_from1" 'Y' Left
-  |> add_transition "return_from1" 'X' "return_from1" 'X' Left
-  |> add_transition "return_from1" 'Z' "inner_sweep" '1' Right  (* obnovi in nadaljuj *)
+  |> add_transition "vrni1" '1' "vrni1" '1' Left
+  |> add_transition "vrni1" 'Y' "vrni1" 'Y' Left
+  |> add_transition "vrni1" 'X' "vrni1" 'X' Left
+  |> add_transition "vrni1" 'Z' "inner_sweep" '1' Right  
 
-  |> add_transition "return_fromY" '1' "return_fromY" '1' Left
-  |> add_transition "return_fromY" 'Y' "return_fromY" 'Y' Left
-  |> add_transition "return_fromY" 'X' "return_fromY" 'X' Left
-  |> add_transition "return_fromY" 'Z' "inner_sweep" 'Y' Right
+  |> add_transition "vrniY" '1' "vrniY" '1' Left
+  |> add_transition "vrniY" 'Y' "vrniY" 'Y' Left
+  |> add_transition "vrniY" 'X' "vrniY" 'X' Left
+  |> add_transition "vrniY" 'Z' "inner_sweep" 'Y' Right
 
-  (* po končani notranji zanki se vrni na levi rob za naslednji outer korak *)
-  |> add_transition "pojdi_levo_for_next" '1' "pojdi_levo_for_next" '1' Left
-  |> add_transition "pojdi_levo_for_next" 'Y' "pojdi_levo_for_next" 'Y' Left
-  |> add_transition "pojdi_levo_for_next" 'Z' "pojdi_levo_for_next" 'Z' Left
-  |> add_transition "pojdi_levo_for_next" ' ' "poisci1" ' ' Right
+  |> add_transition "pojdi_levo" '1' "pojdi_levo" '1' Left
+  |> add_transition "pojdi_levo" 'Y' "pojdi_levo" 'Y' Left
+  |> add_transition "pojdi_levo" 'Z' "pojdi_levo" 'Z' Left
+  |> add_transition "pojdi_levo" ' ' "poisci1" ' ' Right
 
-  (* clean: pobriši Y-je in X, pusti samo rezultat *)
   |> add_transition "clean1" 'Y' "clean1" 'Y' Left
   |> add_transition "clean1" 'X' "clean1" 'X' Left
   |> add_transition "clean1" ' ' "clean" ' ' Right
@@ -754,7 +744,7 @@ let kvadrat_stroj : MachineUcinkovito.t =
   zapisano v dvojiškem zapisu, na koncu pa naj bo na traku zapisanih
   natanko `n` enic.
 [*----------------------------------------------------------------------------*)
-(*ideja: https://cs.stackexchange.com/questions/139346/single-tape-tm-that-converts-numbers-from-binary-notation-to-unary*)
+(*ideja: odšteješ ena od binarnega št in dodaš ena na konec*)
 
 let enice_stroj : MachineUcinkovito.t = 
   let open MachineUcinkovito in
@@ -764,22 +754,22 @@ let enice_stroj : MachineUcinkovito.t =
     
   |> add_transition "pripravi" '1' "pripravi" '1' Right
   |> add_transition "pripravi" '0' "pripravi" '0' Right
-  |> add_transition "pripravi" ' ' "q0" 'X' Left 
+  |> add_transition "pripravi" ' ' "odstej" 'X' Left 
     
-  |> add_transition "q0" '0' "q0" '1' Left
-  |> add_transition "q0" '1' "q1" '0' Right
-  |> add_transition "q0" ' ' "pocisti" ' ' Right
+  |> add_transition "odstej" '0' "odstej" '1' Left
+  |> add_transition "odstej" '1' "na_konec" '0' Right
+  |> add_transition "odstej" ' ' "pocisti" ' ' Right
     
-  |> add_transition "q1" '0' "q1" '0' Right
-  |> add_transition "q1" '1' "q1" '1' Right
-  |> add_transition "q1" 'X' "q2" 'X' Right
+  |> add_transition "na_konec" '0' "na_konec" '0' Right
+  |> add_transition "na_konec" '1' "na_konec" '1' Right
+  |> add_transition "na_konec" 'X' "dodaj" 'X' Right
     
-  |> add_transition "q2" ' ' "q3" '1' Left
-  |> add_transition "q2" '1' "q2" '1' Right
-  |> add_transition "q2" 'X' "q3" 'X' Left
+  |> add_transition "dodaj" ' ' "nazaj" '1' Left
+  |> add_transition "dodaj" '1' "dodaj" '1' Right
+  |> add_transition "dodaj" 'X' "nazaj" 'X' Left
     
-  |> add_transition "q3" '1' "q3" '1' Left
-  |> add_transition "q3" 'X' "q0" 'X' Left
+  |> add_transition "nazaj" '1' "nazaj" '1' Left
+  |> add_transition "nazaj" 'X' "odstej" 'X' Left
     
   |> add_transition "pocisti" '1' "pocisti" ' ' Right
   |> add_transition "pocisti" 'X' "koncaj" ' ' Right
@@ -827,6 +817,8 @@ let dvojski_stroj : MachineUcinkovito.t =
   `)`, `[` in `]` ter `{` in `}`. Stroj naj na traku izpiše `1`, če so
   oklepaji pravilno uravnoteženi in gnezdeni, ter `0` sicer.
 [*----------------------------------------------------------------------------*)
+
+(*Ideja: poisces prvi zaklepaj nato pogledaš če ima prav postavljen oklepaj (od znotraj navzven)*)
 
 let uravnotezeni_oklepaji_stroj : MachineUcinkovito.t = 
   let open MachineUcinkovito in
